@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tornado Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Overlay Styling */
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(22, 22, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid #4f46e5;
+            padding: 25px;
+            border-radius: 12px;
+            width: 320px;
+            z-index: 10;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #818cf8;
+            font-size: 24px;
+            border-bottom: 2px solid #312e81;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            font-size: 15px;
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #4338ca, #4f46e5);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            margin-top: 8px;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .warning-text {
+            color: #f87171;
+            font-size: 13px;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        /* Right status display */
+        #status-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(22, 22, 40, 0.85);
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 10;
+            border-left: 4px solid #10b981;
+            pointer-events: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="status-display">
+        <div id="active-tornado">Tornado: Unnamed</div>
+        <div id="active-location">Location: Nowhere</div>
+    </div>
+
+    <div class="ui-panel">
+        <h2>Tornado Editor</h2>
+        
+        <div class="form-group">
+            <label for="tornado-name">🌪️ Tornado Name</label>
+            <input type="text" id="tornado-name" value="Hypercell X" placeholder="Enter custom name...">
+        </div>
+
+        <div class="form-group">
+            <label for="city-select">🏙️ Target City</label>
+            <div id="city-selection-zone">
+                <select id="city-select"></select>
+            </div>
+        </div>
+
+        <button class="btn" id="spawn-btn">Spawn Tornado!</button>
+    </div>
+
+    <script>
+        // --- Game Data & State ---
+        // Starting with an empty array to simulate having no cities initially
+        let cities = []; 
+
+        // --- 3D Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x11111e);
+        scene.fog = new THREE.FogExp2(0x11111e, 0.05);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 8, 15);
+        camera.lookAt(0, 4, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x444444);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0x818cf8, 0.8);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        // Ground/Grid
+        const gridHelper = new THREE.GridHelper(40, 40, 0x4f46e5, 0x22223b);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        // --- Tornado Generation (Particle System) ---
+        const particleCount = 400;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const customData = []; // Store custom math details for each particle
+
+        for (let i = 0; i < particleCount; i++) {
+            // High y = top of tornado, low y = bottom funnel
+            const y = Math.random() * 8; 
+            const angle = Math.random() * Math.PI * 2;
+            
+            // Funnel shape math: wider at the top, narrower at the bottom
+            const radius = (y * 0.4) + 0.2; 
+            
+            const x = Math.sin(angle) * radius;
+            const z = Math.cos(angle) * radius;
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            customData.push({
+                angle: angle,
+                y: y,
+                speed: 2 + Math.random() * 3,
+                radiusMultiplier: 1 + (Math.random() * 0.2 - 0.1) // added randomness
+            });
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        // Create textured look for particles
+        const material = new THREE.PointsMaterial({
+            color: 0x64748b,
+            size: 0.25,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const tornadoParticles = new THREE.Points(geometry, material);
+        scene.add(tornadoParticles);
+
+        // --- City 3D Models Holder ---
+        let cityGroup = new THREE.Group();
+        scene.add(cityGroup);
+
+        // Function to build random boxy buildings for a city
+        function build3DCity() {
+            // Clear previous buildings
+            while(cityGroup.children.length > 0){ 
+                cityGroup.remove(cityGroup.children[0]); 
+            }
+
+            // Create 12 random buildings around the map
+            for(let i=0; i<12; i++) {
+                const w = 0.6 + Math.random() * 0.6;
+                const h = 1.5 + Math.random() * 4;
+                const d = 0.6 + Math.random() * 0.6;
+                
+                const boxGeo = new THREE.BoxGeometry(w, h, d);
+                const boxMat = new THREE.MeshLambertMaterial({
+                    color: Math.random() > 0.5 ? 0x334155 : 0x475569
+                });
+                
+                const building = new THREE.Mesh(boxGeo, boxMat);
+                
+                // Distribute around the tornado center
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 3 + Math.random() * 5;
+                building.position.x = Math.sin(angle) * dist;
+                building.position.z = Math.cos(angle) * dist;
+                building.position.y = h / 2; // place on ground
+                
+                cityGroup.add(building);
+            }
+        }
+
+        // --- UI Logic & City Checks ---
+        const citySelectionZone = document.getElementById('city-selection-zone');
+        const spawnBtn = document.getElementById('spawn-btn');
+        const tornadoNameInput = document.getElementById('tornado-name');
+        
+        const activeTornadoTxt = document.getElementById('active-tornado');
+        const activeLocationTxt = document.getElementById('active-location');
+
+        function updateCityUI() {
+            if (cities.length === 0) {
+                // Scenario: No cities available -> Prompt user to create one
+                citySelectionZone.innerHTML = `
+                    <div class="warning-text">No cities, make one!</div>
+                    <button class="btn btn-secondary" id="make-city-btn" type="button">🛠️ Build a City</button>
+                `;
+                
+                // Attach event listener to the freshly made button
+                document.getElementById('make-city-btn').addEventListener('click', createNewCity);
+                spawnBtn.disabled = true;
+                spawnBtn.style.opacity = 0.4;
+                spawnBtn.style.cursor = 'not-allowed';
+            } else {
+                // Scenario: Cities exist -> Show selection dropdown
+                let selectHtml = `<select id="city-select">`;
+                cities.forEach(city => {
+                    selectHtml += `<option value="${city}">${city}</option>`;
+                });
+                selectHtml += `</select>`;
+                
+                citySelectionZone.innerHTML = selectHtml;
+                spawnBtn.disabled = false;
+                spawnBtn.style.opacity = 1;
+                spawnBtn.style.cursor = 'pointer';
+            }
+        }
+
+        function createNewCity() {
+            const cityNames = ["Bricksville", "Stormy Plains", "Windy Peaks", "Metro Valley", "Vortex Ville"];
+            // Pick a random name from list or generate one
+            const randomName = cityNames[Math.floor(Math.random() * cityNames.length)] + " " + (cities.length + 1);
+            
+            cities.push(randomName);
+            updateCityUI();
+            build3DCity(); // Generate new 3D buildings on screen
+        }
+
+        // Action: Click Spawn Button
+        spawnBtn.addEventListener('click', () => {
+            const name = tornadoNameInput.value.trim() || "Unnamed Storm";
+            const selectedCity = document.getElementById('city-select').value;
+            
+            activeTornadoTxt.innerText = `🌪️ Tornado: ${name}`;
+            activeLocationTxt.innerText = `📍 Location: ${selectedCity}`;
+            
+            // Give tornado particles a violent speed surge when hitting spawn button
+            material.color.setHex(0x94a3b8);
+            setTimeout(() => material.color.setHex(0x64748b), 500);
+        });
+
+        // Initialize UI Setup
+        updateCityUI();
+
+        // --- Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+            const positions = tornadoParticles.geometry.attributes.position.array;
+
+            // Spin and animate particles inside the funnel math
+            for (let i = 0; i < particleCount; i++) {
+                const data = customData[i];
+                
+                // Advance the rotation angle over time
+                data.angle += 0.02 * data.speed;
+                
+                // Dynamic funnel calculation
+                const radius = ((data.y * 0.4) + 0.2) * data.radiusMultiplier;
+                
+                // Put back calculated x & z positions
+                positions[i * 3] = Math.sin(data.angle) * radius;
+                positions[i * 3 + 2] = Math.cos(data.angle) * radius;
+                
+                // Slowly make particles drift upwards and cycle them back to bottom
+                positions[i * 3 + 1] += 0.01 * data.speed;
+                if(positions[i * 3 + 1] > 8) {
+                    positions[i * 3 + 1] = 0; // Reset back down
+                }
+                data.y = positions[i * 3 + 1];
+            }
+            
+            tornadoParticles.geometry.attributes.position.needsUpdate = true;
+            
+            // Slow orbit effect for ambient presentation camera
+            tornadoParticles.rotation.y = elapsedTime * 0.2;
+            cityGroup.rotation.y = elapsedTime * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle scaling windows smoothly
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
