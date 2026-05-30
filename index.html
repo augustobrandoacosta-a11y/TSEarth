@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tornado Simulator - Bright Air Edition</title>
+    <title>3D Tornado Simulator - Fixed Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #1e2530; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #b0c4de; color: #fff; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; z-index: 1; }
 
         .ui-panel {
-            position: absolute; top: 20px; left: 20px; background: rgba(30, 41, 59, 0.9);
+            position: absolute; top: 20px; left: 20px; background: rgba(30, 41, 59, 0.95);
             backdrop-filter: blur(12px); border: 2px solid #e2e8f0; padding: 20px;
-            border-radius: 12px; width: 280px; z-index: 10; box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            border-radius: 12px; width: 280px; z-index: 10; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
 
         h2 { margin: 0 0 15px 0; color: #f8fafc; font-size: 22px; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 10px; }
@@ -35,9 +35,9 @@
         .warning-text { color: #f87171; font-size: 13px; margin-bottom: 10px; text-align: center; border: 1px dashed #f87171; padding: 5px; background: rgba(248,113,113,0.1); }
         
         #status-display {
-            position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.9);
+            position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.95);
             padding: 15px; border-radius: 8px; z-index: 10; border-left: 5px solid #3b82f6;
-            min-width: 220px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            min-width: 220px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
 
         .ef-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #3b82f6; color: white; }
@@ -86,11 +86,11 @@
     <script>
         let cities = [];
         let currentEF = 1;
-        let particleData = [];
+        let particles = [];
+        const totalParticles = 400;
         
         // --- 3D Scene Setup ---
         const scene = new THREE.Scene();
-        // A lighter, overcast sky blue/gray background instead of pitching black dark
         scene.background = new THREE.Color(0xb0c4de);
         scene.fog = new THREE.FogExp2(0xb0c4de, 0.025);
 
@@ -102,11 +102,11 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // Bright, even scene lighting to keep everything clean and clear
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+        // Bright Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
         directionalLight.position.set(5, 15, 5);
         scene.add(directionalLight);
 
@@ -114,9 +114,138 @@
         const grid = new THREE.GridHelper(80, 40, 0x94a3b8, 0xcbd5e1);
         scene.add(grid);
 
-        // Custom Soft Air/Cloud Texture Generator
-        function createCloudTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
+        // --- Tornado Group Container ---
+        const tornadoGroup = new THREE.Group();
+        scene.add(tornadoGroup);
+
+        // Crash-proof 3D Air Clumps (using basic spheres that always load perfectly)
+        const cloudGeometry = new THREE.SphereGeometry(0.6, 5, 5); 
+        const cloudMaterial = new THREE.MeshLambertMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        for (let i = 0; i < totalParticles; i++) {
+            const mesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            const yHeight = Math.random() * 16;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1.5 + Math.random() * 2.5;
+
+            mesh.position.y = yHeight;
+            tornadoGroup.add(mesh);
+
+            particles.push({
+                mesh: mesh,
+                angle: angle,
+                y: yHeight,
+                speed: speed,
+                baseRadiusMultiplier: 1
+            });
+        }
+
+        // --- UI Operations ---
+        function updateCityUI() {
+            const zone = document.getElementById('city-selection-zone');
+            const spawnBtn = document.getElementById('spawn-btn');
+
+            if (cities.length === 0) {
+                zone.innerHTML = `<div class="warning-text">No cities, make one!</div>`;
+                spawnBtn.disabled = true;
+                spawnBtn.style.opacity = "0.3";
+            } else {
+                let options = cities.map(name => `<option value="${name}">${name}</option>`).join('');
+                zone.innerHTML = `<select id="city-select">${options}</select>`;
+                spawnBtn.disabled = false;
+                spawnBtn.style.opacity = "1";
+            }
+        }
+
+        function createNewCity() {
+            const cityName = prompt("Name your city:");
+            if (cityName && cityName.trim() !== "") {
+                cities.push(cityName.trim());
+                updateCityUI();
+                spawnBuilding();
+            }
+        }
+
+        function spawnBuilding() {
+            const height = Math.random() * 5 + 1.5;
+            const bGeo = new THREE.BoxGeometry(1.2, height, 1.2);
+            const bMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+            const building = new THREE.Mesh(bGeo, bMat);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const range = 6 + Math.random() * 9;
+            building.position.set(Math.sin(angle)*range, height/2, Math.cos(angle)*range);
+            scene.add(building);
+        }
+
+        function spawnTornado() {
+            const tName = document.getElementById('tornado-name').value || "White Out";
+            const cName = document.getElementById('city-select').value;
+            currentEF = parseInt(document.getElementById('ef-scale').value);
+            
+            document.getElementById('active-tornado').innerText = "🌪️ " + tName;
+            document.getElementById('ef-val').innerText = "EF" + currentEF;
+            document.getElementById('active-location').innerText = "📍 Target: " + cName;
+
+            // Update look safely based on EF choice
+            particles.forEach(p => {
+                if (currentEF >= 5) {
+                    p.mesh.material.color.setHex(0xffffff); // Pure White cloud air
+                    p.mesh.scale.set(1.5, 1.5, 1.5);       // Makes individual puffs bigger
+                } else if (currentEF >= 3) {
+                    p.mesh.material.color.setHex(0xe2e8f0); // Bright Gray
+                    p.mesh.scale.set(1.2, 1.2, 1.2);
+                } else {
+                    p.mesh.material.color.setHex(0xf1f5f9); // Light Air
+                    p.mesh.scale.set(1.0, 1.0, 1.0);
+                }
+            });
+        }
+
+        // --- Main Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+            
+            const rotationVelocity = 1.2 + (currentEF * 0.8);
+            const expandFactor = 0.7 + (currentEF * 0.16);
+
+            particles.forEach((p) => {
+                // Spin air chunks around the track
+                p.angle += (0.01 * p.speed) * rotationVelocity;
+                
+                // Lift air upward
+                p.y += 0.02 * p.speed;
+                if (p.y > 16) p.y = 0; // Loop back down
+
+                // Tornado conical structure math
+                let radius = ((Math.pow(p.y, 1.35) * 0.22) + 0.3) * expandFactor;
+                
+                // Light realistic shifting wobble
+                radius += Math.sin(elapsed * 5 + (p.y * 10)) * (0.05 * currentEF);
+
+                p.mesh.position.x = Math.sin(p.angle) * radius;
+                p.mesh.position.y = p.y;
+                p.mesh.position.z = Math.cos(p.angle) * radius;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        updateCityUI();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
