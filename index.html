@@ -2,49 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tornado Sandbox - Interactive Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Tornado Sandbox - Tablet Fix</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #b0c4de; color: #fff; user-select: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #b0c4de; color: #fff; user-select: none; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; z-index: 1; }
 
         .ui-panel {
             position: absolute; top: 20px; left: 20px; background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(12px); border: 2px solid #e2e8f0; padding: 20px;
-            border-radius: 12px; width: 280px; z-index: 10; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; width: 260px; z-index: 10;
         }
 
-        h2 { margin: 0 0 15px 0; color: #f8fafc; font-size: 22px; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 10px; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 5px; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+        h2 { margin: 0 0 10px 0; color: #f8fafc; font-size: 20px; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 5px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 3px; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
         
         input[type="text"], select {
-            width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155;
+            width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155;
             color: white; border-radius: 6px; box-sizing: border-box; font-size: 14px;
         }
 
         .btn {
             background: #3b82f6; color: white; border: none; padding: 12px;
             border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px;
-            transition: 0.2s; text-transform: uppercase; font-size: 13px;
+            text-transform: uppercase; font-size: 13px; -webkit-appearance: none;
         }
-        .btn:hover { background: #2563eb; transform: translateY(-1px); }
-        .btn-create { background: #10b981; color: white; margin-bottom: 10px; }
-        .btn-create:hover { background: #059669; }
-        
-        .btn-stop { background: #ef4444; color: white; display: none; margin-top: 8px; }
-        .btn-stop:hover { background: #dc2626; }
+        .btn-create { background: #10b981; margin-bottom: 5px; }
+        .btn-stop { background: #ef4444; display: none; margin-top: 5px; }
 
-        .warning-text { color: #f87171; font-size: 13px; margin-bottom: 10px; text-align: center; border: 1px dashed #f87171; padding: 5px; background: rgba(248,113,113,0.1); }
-        .hint-text { font-size: 12px; color: #cbd5e1; background: #334155; padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: center; }
+        .warning-text { color: #f87171; font-size: 12px; margin-bottom: 5px; text-align: center; border: 1px dashed #f87171; padding: 4px; background: rgba(248,113,113,0.1); }
+        .hint-text { font-size: 11px; color: #cbd5e1; background: #334155; padding: 6px; border-radius: 6px; text-align: center; }
 
         #status-display {
             position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.95);
-            padding: 15px; border-radius: 8px; z-index: 10; border-left: 5px solid #3b82f6;
-            min-width: 220px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            padding: 12px; border-radius: 8px; z-index: 10; border-left: 5px solid #3b82f6;
+            min-width: 180px;
         }
-
-        .ef-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #3b82f6; color: white; }
+        .ef-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #3b82f6; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -53,8 +47,8 @@
     <div id="canvas-container"></div>
 
     <div id="status-display">
-        <div id="active-tornado" style="font-weight: bold; font-size: 18px; margin-bottom: 5px;">Status: Calm Sky</div>
-        <div id="active-ef" style="margin-bottom: 5px;">Severity: <span class="ef-badge" id="ef-val">None</span></div>
+        <div id="active-tornado" style="font-weight: bold; font-size: 16px;">Status: Calm Sky</div>
+        <div id="active-ef" style="margin: 3px 0;">Severity: <span class="ef-badge" id="ef-val">None</span></div>
         <div id="active-location">Location: ---</div>
     </div>
 
@@ -62,8 +56,8 @@
         <h2>Vortex Sandbox</h2>
         
         <div class="form-group">
-            <label>🏗️ Placement Tool</label>
-            <div class="hint-text">Tap anywhere on the grid map to build houses manually!</div>
+            <label>🏗️ Map Placement</label>
+            <div class="hint-text">Tap the empty sky area to place houses!</div>
         </div>
 
         <div class="form-group">
@@ -84,13 +78,13 @@
         </div>
 
         <div class="form-group">
-            <label>🏙️ Target City Selection</label>
+            <label>🏙️ Target City</label>
             <div id="city-selection-zone"></div>
         </div>
 
-        <button class="btn btn-create" onclick="createNewCity()">+ Register New City</button>
-        <button class="btn" id="spawn-btn" onclick="spawnTornado()">Release Tornado</button>
-        <button class="btn btn-stop" id="stop-btn" onclick="stopTornado()">🚨 Emergency Stop</button>
+        <button type="button" class="btn btn-create" onpointerdown="createNewCity()">+ Register New City</button>
+        <button type="button" class="btn" id="spawn-btn" onpointerdown="spawnTornado()">Release Tornado</button>
+        <button type="button" class="btn btn-stop" id="stop-btn" onpointerdown="stopTornado()">🚨 Emergency Stop</button>
     </div>
 
     <script>
@@ -99,32 +93,24 @@
         let particles = [];
         let isStormActive = false;
         
-        // Tornado positioning & motion tracking vectors
-        let tornadoX = 0;
-        let tornadoZ = 0;
-        let targetX = 0;
-        let targetZ = 0;
+        let tornadoX = 0, tornadoZ = 0;
+        let targetX = 0, targetZ = 0;
+        const totalParticles = 300;
         
-        const totalParticles = 400;
-        
-        // --- 3D Scene Setup ---
+        // --- 3D Scene ---
         const scene = new THREE.Scene();
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 14, 26);
+        camera.position.set(0, 14, 24);
         camera.lookAt(0, 2, 0);
 
-        // Light setup for ambient daytime sky tracking
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(5, 20, 5);
-        scene.add(directionalLight);
 
-        // Grid platform floor
+        // Ground Platform
         const gridFloor = new THREE.Mesh(
             new THREE.PlaneGeometry(100, 100),
             new THREE.MeshLambertMaterial({ color: 0x94a3b8, side: THREE.DoubleSide })
@@ -132,47 +118,189 @@
         gridFloor.rotation.x = Math.PI / 2;
         scene.add(gridFloor);
 
-        const gridHelper = new THREE.GridHelper(100, 40, 0x475569, 0x64748b);
+        const gridHelper = new THREE.GridHelper(100, 30, 0x475569, 0x64748b);
         gridHelper.position.y = 0.01;
         scene.add(gridHelper);
 
-        // Set initial sunny weather look
         setWeatherTheme(false);
 
-        // --- Tornado Object Group ---
+        // --- Tornado Object ---
         const tornadoGroup = new THREE.Group();
         scene.add(tornadoGroup);
-        tornadoGroup.visible = false; // Starts hidden!
+        tornadoGroup.visible = false;
 
-        // Basic geometry clusters
-        const cloudGeometry = new THREE.SphereGeometry(0.6, 5, 5); 
-        const cloudMaterial = new THREE.MeshLambertMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.6
-        });
+        const cloudGeometry = new THREE.SphereGeometry(0.5, 4, 4); 
+        const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
 
         for (let i = 0; i < totalParticles; i++) {
-            const mesh = new THREE.Mesh(cloudGeometry, cloudMaterial.clone());
+            const mesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
             const yHeight = Math.random() * 18;
             const angle = Math.random() * Math.PI * 2;
             const speed = 1.5 + Math.random() * 2.5;
-
             mesh.position.y = yHeight;
             tornadoGroup.add(mesh);
-
             particles.push({ mesh: mesh, angle: angle, y: yHeight, speed: speed });
         }
 
-        // --- Interactive Building Placement Engine (Raycaster) ---
+        // --- FIXED: Reliable Screen Touch Placement System ---
         const raycaster = new THREE.Raycaster();
         const mouseVector = new THREE.Vector2();
 
-        window.addEventListener('pointerdown', (event) => {
-            // Block building touches if clicking UI controls panel
-            if (event.clientX < 320 && event.clientY < 550) return;
+        function handleScreenTouch(clientX, clientY) {
+            // Ignore touch if user is hitting the UI panel container
+            if (clientX < 300 && clientY < 550) return;
 
-            mouseVector.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouseVector.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            mouseVector.x = (clientX / window.innerWidth) * 2 - 1;
+            mouseVector.y = -(clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouseVector, camera);
+            const intersects = raycaster.intersectObject(gridFloor);
+
+            if (intersects.length > 0) {
+                if (cities.length === 0) {
+                    alert("Please register a city zone first!");
+                    return;
+                }
+                const point = intersects[0].point;
+                placeStructure(point.x, point.z);
+            }
+        }
+
+        // Detect touch handles for mobile tablet surfaces
+        window.addEventListener('touchstart', (e) => {
+            handleScreenTouch(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        function placeStructure(x, z) {
+            const isTower = Math.random() > 0.6;
+            const height = isTower ? (Math.random() * 4 + 3) : (Math.random() * 1.2 + 0.8);
+            const bGeo = new THREE.BoxGeometry(1, height, 1);
+            const bMat = new THREE.MeshLambertMaterial({ color: isTower ? 0x334155 : 0xd1d5db });
+            const building = new THREE.Mesh(bGeo, bMat);
+            building.position.set(x, height / 2, z);
+            scene.add(building);
+        }
+
+        // --- Gameplay Controller Operations ---
+        function setWeatherTheme(stormMode) {
+            if (stormMode) {
+                scene.background = new THREE.Color(0x556677);
+                scene.fog = new THREE.FogExp2(0x556677, 0.03);
+            } else {
+                scene.background = new THREE.Color(0xb0c4de);
+                scene.fog = new THREE.FogExp2(0xb0c4de, 0.01);
+            }
+        }
+
+        function updateCityUI() {
+            const zone = document.getElementById('city-selection-zone');
+            const spawnBtn = document.getElementById('spawn-btn');
+
+            if (cities.length === 0) {
+                zone.innerHTML = `<div class="warning-text">No cities, make one!</div>`;
+                spawnBtn.style.opacity = "0.3";
+            } else {
+                let options = cities.map(name => `<option value="${name}">${name}</option>`).join('');
+                zone.innerHTML = `<select id="city-select">${options}</select>`;
+                spawnBtn.style.opacity = "1";
+            }
+        }
+
+        function createNewCity() {
+            const cityName = prompt("Name your city development zone:");
+            if (cityName && cityName.trim() !== "") {
+                cities.push(cityName.trim());
+                updateCityUI();
+            }
+        }
+
+        function spawnTornado() {
+            if (cities.length === 0) {
+                alert("Create a city first!");
+                return;
+            }
+            
+            const tName = document.getElementById('tornado-name').value || "Vortex Zero";
+            const cName = document.getElementById('city-select').value;
+            currentEF = parseInt(document.getElementById('ef-scale').value);
+            
+            document.getElementById('active-tornado').innerText = "🌪️ " + tName;
+            document.getElementById('ef-val').innerText = "EF" + currentEF;
+            document.getElementById('active-location').innerText = "📍 Area: " + cName;
+
+            isStormActive = true;
+            tornadoGroup.visible = true;
+            setWeatherTheme(true);
+
+            document.getElementById('spawn-btn').style.display = "none";
+            document.getElementById('stop-btn').style.display = "block";
+
+            particles.forEach(p => {
+                let scaleSize = currentEF >= 5 ? 1.5 : (currentEF >= 3 ? 1.1 : 0.8);
+                p.mesh.scale.set(scaleSize, scaleSize, scaleSize);
+            });
+        }
+
+        function stopTornado() {
+            isStormActive = false;
+            tornadoGroup.visible = false;
+            setWeatherTheme(false);
+
+            document.getElementById('active-tornado').innerText = "Status: Calm Sky";
+            document.getElementById('ef-val').innerText = "None";
+            document.getElementById('active-location').innerText = "Location: ---";
+
+            document.getElementById('spawn-btn').style.display = "block";
+            document.getElementById('stop-btn').style.display = "none";
+            
+            tornadoX = 0; tornadoZ = 0;
+            tornadoGroup.position.set(0, 0, 0);
+        }
+
+        // --- Core Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+
+            if (isStormActive) {
+                if (Math.abs(tornadoX - targetX) < 1 && Math.abs(tornadoZ - targetZ) < 1) {
+                    targetX = (Math.random() - 0.5) * 35;
+                    targetZ = (Math.random() - 0.5) * 35;
+                }
+                tornadoX += (targetX - tornadoX) * 0.012;
+                tornadoZ += (targetZ - tornadoZ) * 0.012;
+                tornadoGroup.position.set(tornadoX, 0, tornadoZ);
+
+                const rotationVelocity = 1.2 + (currentEF * 0.8);
+                const expandFactor = 0.7 + (currentEF * 0.16);
+
+                particles.forEach((p) => {
+                    p.angle += (0.01 * p.speed) * rotationVelocity;
+                    p.y += 0.02 * p.speed;
+                    if (p.y > 18) p.y = 0;
+
+                    let radius = ((Math.pow(p.y, 1.35) * 0.22) + 0.3) * expandFactor;
+                    radius += Math.sin(elapsed * 5 + (p.y * 10)) * 0.04;
+
+                    p.mesh.position.x = Math.sin(p.angle) * radius;
+                    p.mesh.position.y = p.y;
+                    p.mesh.position.z = Math.cos(p.angle) * radius;
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        updateCityUI();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
