@@ -8,9 +8,10 @@
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #b0c4de; color: #fff; user-select: none; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; z-index: 1; }
 
+        /* The Control Panel UI */
         .ui-panel {
-            position: absolute; top: 20px; left: 20px; background: rgba(30, 41, 59, 0.95);
-            border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; width: 260px; z-index: 10;
+            position: absolute; top: 20px; left: 20px; background: #1e293b;
+            border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; width: 260px; z-index: 100;
         }
 
         h2 { margin: 0 0 10px 0; color: #f8fafc; font-size: 20px; text-align: center; border-bottom: 2px solid #334155; padding-bottom: 5px; }
@@ -25,7 +26,7 @@
         .btn {
             background: #3b82f6; color: white; border: none; padding: 12px;
             border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px;
-            text-transform: uppercase; font-size: 13px; -webkit-appearance: none;
+            text-transform: uppercase; font-size: 13px;
         }
         .btn-create { background: #10b981; margin-bottom: 5px; }
         .btn-stop { background: #ef4444; display: none; margin-top: 5px; }
@@ -34,8 +35,8 @@
         .hint-text { font-size: 11px; color: #cbd5e1; background: #334155; padding: 6px; border-radius: 6px; text-align: center; }
 
         #status-display {
-            position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.95);
-            padding: 12px; border-radius: 8px; z-index: 10; border-left: 5px solid #3b82f6;
+            position: absolute; bottom: 20px; right: 20px; background: #0f172a;
+            padding: 12px; border-radius: 8px; z-index: 100; border-left: 5px solid #3b82f6;
             min-width: 180px;
         }
         .ef-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #3b82f6; }
@@ -52,12 +53,12 @@
         <div id="active-location">Location: ---</div>
     </div>
 
-    <div class="ui-panel">
+    <div class="ui-panel" id="ui-box">
         <h2>Vortex Sandbox</h2>
         
         <div class="form-group">
             <label>🏗️ Map Placement</label>
-            <div class="hint-text">Tap the empty sky area to place houses!</div>
+            <div class="hint-text">Tap the empty right side of the screen to place buildings!</div>
         </div>
 
         <div class="form-group">
@@ -82,9 +83,9 @@
             <div id="city-selection-zone"></div>
         </div>
 
-        <button type="button" class="btn btn-create" onpointerdown="createNewCity()">+ Register New City</button>
-        <button type="button" class="btn" id="spawn-btn" onpointerdown="spawnTornado()">Release Tornado</button>
-        <button type="button" class="btn btn-stop" id="stop-btn" onpointerdown="stopTornado()">🚨 Emergency Stop</button>
+        <button type="button" class="btn btn-create" onclick="createNewCity()">+ Register New City</button>
+        <button type="button" class="btn" id="spawn-btn" onclick="spawnTornado()">Release Tornado</button>
+        <button type="button" class="btn btn-stop" id="stop-btn" onclick="stopTornado()">🚨 Emergency Stop</button>
     </div>
 
     <script>
@@ -142,16 +143,17 @@
             particles.push({ mesh: mesh, angle: angle, y: yHeight, speed: speed });
         }
 
-        // --- FIXED: Reliable Screen Touch Placement System ---
+        // --- Fixed: Map Touch Recognition ---
         const raycaster = new THREE.Raycaster();
         const mouseVector = new THREE.Vector2();
 
-        function handleScreenTouch(clientX, clientY) {
-            // Ignore touch if user is hitting the UI panel container
-            if (clientX < 300 && clientY < 550) return;
+        // Clicking/Tapping the background sky area
+        window.addEventListener('click', (e) => {
+            // CRITICAL FIX: If you touch anywhere near the menu box, STOP and do not place a building!
+            if (e.clientX < 310 && e.clientY < 520) return;
 
-            mouseVector.x = (clientX / window.innerWidth) * 2 - 1;
-            mouseVector.y = -(clientY / window.innerHeight) * 2 + 1;
+            mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouseVector, camera);
             const intersects = raycaster.intersectObject(gridFloor);
@@ -164,12 +166,7 @@
                 const point = intersects[0].point;
                 placeStructure(point.x, point.z);
             }
-        }
-
-        // Detect touch handles for mobile tablet surfaces
-        window.addEventListener('touchstart', (e) => {
-            handleScreenTouch(e.touches[0].clientX, e.touches[0].clientY);
-        }, { passive: true });
+        });
 
         function placeStructure(x, z) {
             const isTower = Math.random() > 0.6;
@@ -181,7 +178,7 @@
             scene.add(building);
         }
 
-        // --- Gameplay Controller Operations ---
+        // --- Game Setup Controls ---
         function setWeatherTheme(stormMode) {
             if (stormMode) {
                 scene.background = new THREE.Color(0x556677);
@@ -220,7 +217,7 @@
                 return;
             }
             
-            const tName = document.getElementById('tornado-name').value || "Vortex Zero";
+            const tName = document.getElementById('tornado-name').value || "White Out";
             const cName = document.getElementById('city-select').value;
             currentEF = parseInt(document.getElementById('ef-scale').value);
             
@@ -257,7 +254,7 @@
             tornadoGroup.position.set(0, 0, 0);
         }
 
-        // --- Core Loop ---
+        // --- Core Animation Loop ---
         const clock = new THREE.Clock();
 
         function animate() {
