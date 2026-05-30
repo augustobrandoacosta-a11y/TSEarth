@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Tornado Sandbox - Destruction Edition</title>
+    <title>3D Tornado Sandbox - Sound FX Edition</title>
     
     <link rel="icon" type="image/png" href="icon.png">
     
@@ -56,7 +56,7 @@
     </div>
 
     <div class="ui-panel" id="ui-box">
-        <h2>Destruction Sandbox</h2>
+        <h2>Sound Sandbox</h2>
         
         <div class="form-group">
             <label>🏗️ Map Placement</label>
@@ -101,6 +101,62 @@
         let tornadoX = 0, tornadoZ = 0;
         let targetX = 0, targetZ = 0;
         const totalParticles = 300;
+
+        // --- Built-In Synthesized Audio Engine ---
+        let audioCtx = null;
+        let windGainNode = null;
+        let windFilterNode = null;
+
+        function initAudio() {
+            if (audioCtx) return; // Already setup
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Generate raw mathematical wind noise buffer
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+
+            // Lowpass filter softens white noise into rumbling storm wind
+            windFilterNode = audioCtx.createBiquadFilter();
+            windFilterNode.type = 'lowpass';
+            windFilterNode.frequency.value = 250; 
+
+            windGainNode = audioCtx.createGain();
+            windGainNode.gain.value = 0; // Starts silent
+
+            whiteNoise.connect(windFilterNode);
+            windFilterNode.connect(windGainNode);
+            windGainNode.connect(audioCtx.destination);
+            whiteNoise.start();
+        }
+
+        function playCrashSound() {
+            if (!audioCtx) return;
+            
+            // Create short chaotic crunch explosion frequencies
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            // Drop pitch down fast like falling debris
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.4);
+
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
         
         // --- 3D Scene ---
         const scene = new THREE.Scene();
@@ -192,6 +248,8 @@
         function shatterBuilding(b, index) {
             scene.remove(b.mesh); 
             buildings.splice(index, 1);
+            
+            playCrashSound(); // Trigger synthetic crunch sound layout instantly!
 
             const piecesCount = 6;
             const pieceGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
@@ -249,6 +307,11 @@
                 alert("Create a city first!");
                 return;
             }
+
+            initAudio(); // Awake standard audio channels upon screen interactions
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
             
             const tName = document.getElementById('tornado-name').value || "White Out";
             const cName = document.getElementById('city-select').value;
@@ -261,6 +324,12 @@
             isStormActive = true;
             tornadoGroup.visible = true;
             setWeatherTheme(true);
+
+            // Dynamically scale up wind noise loudness and frequency pitch filter matching EF ratings
+            if (windGainNode && windFilterNode) {
+                windGainNode.gain.setTargetAtTime(0.15 + (currentEF * 0.1), audioCtx.currentTime, 0.5);
+                windFilterNode.frequency.setTargetAtTime(200 + (currentEF * 60), audioCtx.currentTime, 0.5);
+            }
 
             document.getElementById('spawn-btn').style.display = "none";
             document.getElementById('stop-btn').style.display = "block";
@@ -275,6 +344,11 @@
             isStormActive = false;
             tornadoGroup.visible = false;
             setWeatherTheme(false);
+
+            // Fade wind sound back down to total silence smoothly
+            if (windGainNode) {
+                windGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+            }
 
             document.getElementById('active-tornado').innerText = "Status: Calm Sky";
             document.getElementById('ef-val').innerText = "None";
